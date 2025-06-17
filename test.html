@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>MetaMask ECIES Demo</title></head>
+<body>
+  <h2>MetaMask ECIES 加密/解密演示</h2>
+  <button id="connect">连接钱包</button>
+  <p>地址：<span id="address"></span></p>
+
+  <textarea id="plaintext" rows="3" cols="40">abc123</textarea><br>
+  <button id="encrypt">加密</button>
+  <p>密文：<textarea id="encrypted" rows="5" cols="60"></textarea></p>
+  <button id="decrypt">解密</button>
+  <p>解密结果：<span id="decrypted"></span></p>
+
+  <!-- ✅ 正确引入 eth-sig-util（UMD版本） -->
+  <script src="https://cdn.jsdelivr.net/npm/@metamask/eth-sig-util@5.0.1/dist/index.umd.min.js"></script>
+
+  <script>
+    let userAddress = '';
+    let encryptedText = '';
+
+    document.getElementById('connect').onclick = async () => {
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      userAddress = accounts[0];
+      document.getElementById('address').innerText = userAddress;
+    };
+
+    document.getElementById('encrypt').onclick = async () => {
+      try {
+        const publicKey = await ethereum.request({
+          method: 'eth_getEncryptionPublicKey',
+          params: [userAddress],
+        });
+
+        const data = document.getElementById('plaintext').value;
+
+        // ✅ 加密数据
+        const encrypted = window.sigUtil.encrypt({
+          publicKey,
+          data,
+          version: 'x25519-xsalsa20-poly1305',
+        });
+
+        encryptedText = btoa(JSON.stringify(encrypted));
+        document.getElementById('encrypted').value = encryptedText;
+
+      } catch (err) {
+        console.error("加密失败:", err);
+        alert("加密失败，请查看控制台日志");
+      }
+    };
+
+    document.getElementById('decrypt').onclick = async () => {
+      try {
+        const decrypted = await ethereum.request({
+          method: 'eth_decrypt',
+          params: [atob(encryptedText), userAddress],
+        });
+        document.getElementById('decrypted').innerText = decrypted;
+      } catch (err) {
+        console.error("解密失败:", err);
+        alert("解密失败，请查看控制台日志");
+      }
+    };
+  </script>
+</body>
+</html>
